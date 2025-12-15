@@ -1,0 +1,37 @@
+# K-Hunter Trading System Requirements
+# Python 3.9+ (32-bit for Kiwoom OCX)
+
+# HTTP & API
+requests>=2.31.0
+websockets>=12.0
+websocket-client>=1.6.0  # 동기 WebSocket (한투 실시간 시세)
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Async & Threading
+aiohttp>=3.9.0
+
+# Configuration
+python-dotenv>=1.0.0
+PyYAML>=6.0.1
+
+# Logging
+loguru>=0.7.2
+
+# Encryption (for KIS API hash)
+pycryptodome>=3.20.0
+
+# GUI (Required for Kiwoom OCX in Phase 2)
+PyQt5>=5.15.10
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Rate Limiting
+ratelimit>=2.2.1
+
+# Type Hints
+typing-extensions>=4.8.0

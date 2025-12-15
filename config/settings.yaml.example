@@ -1,0 +1,69 @@
+# K-Hunter Trading System Configuration
+# 복사하여 settings.yaml 생성 후 실제 값 입력
+
+# 한국투자증권 API 설정 (실전투자)
+kis:
+  # 실전투자 설정
+  url: "https://openapi.koreainvestment.com:9443"
+  app_key: "YOUR_APP_KEY"
+  app_secret: "YOUR_APP_SECRET"
+
+  # 계좌 정보
+  account_number: "12345678"  # 계좌번호 8자리
+  account_product_code: "01"  # 계좌상품코드 (보통 01)
+
+  # HTS ID (조건검색용)
+  hts_id: "YOUR_HTS_ID"
+
+  # 고객유형 (P: 개인, B: 법인)
+  cust_type: "P"
+
+# 키움증권 API 설정 (Phase 2)
+kiwoom:
+  # 조건검색 설정
+  condition_names:
+    - "급등주_RSI과매도"
+    - "거래량급증_저평가"
+
+  # 실시간 조건검색 사용 여부
+  use_realtime_condition: true
+
+# 트레이딩 설정
+trading:
+  # 자금 관리
+  max_position_per_stock: 0.10  # 종목당 최대 10%
+  max_total_exposure: 0.50      # 총 노출 최대 50%
+  min_order_amount: 100000      # 최소 주문금액 10만원
+
+  # 진입 전략
+  entry:
+    rsi_threshold: 30           # RSI 과매도 기준
+    volume_surge_ratio: 2.0     # 거래량 급증 배수
+
+  # 청산 전략
+  exit:
+    take_profit_pct: 0.05       # 익절 +5%
+    stop_loss_pct: 0.02         # 손절 -2%
+    trailing_stop_pct: 0.015    # 트레일링 스탑 1.5%
+
+# 알림 설정
+notification:
+  telegram:
+    enabled: false
+    bot_token: "YOUR_BOT_TOKEN"
+    chat_id: "YOUR_CHAT_ID"
+
+# 로깅 설정
+logging:
+  level: "INFO"
+  file_path: "logs/khunter.log"
+  rotation: "10 MB"
+  retention: "7 days"
+
+# API 호출 제한
+rate_limit:
+  kis:
+    calls_per_second: 5
+  kiwoom:
+    calls_per_second: 4
+    calls_per_hour: 990
