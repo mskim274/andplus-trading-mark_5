@@ -11,6 +11,8 @@ from loguru import logger
 
 from src.core.models import OrderSide, TradeSignal
 from src.core.events import Event, EventType, event_bus
+from src.data.recorder import data_recorder
+from src.data.models import ActionResult
 
 
 class FilterResult(Enum):
@@ -171,6 +173,12 @@ class StrategyAgent:
 
         if filter_result != FilterResult.PASS:
             logger.info(f"Volume surge filtered: {stock_code} - {filter_result.value}")
+            # 필터링된 거래량 급등 시그널 기록
+            data_recorder.record_signal_skip(
+                stock_code=stock_code,
+                skip_reason=f"volume_surge:{filter_result.value}",
+                action_result=ActionResult.FILTERED
+            )
             return
 
         # 주문 수량/금액 계산
@@ -178,6 +186,12 @@ class StrategyAgent:
 
         if order_qty <= 0:
             logger.info(f"Volume surge rejected: {stock_code} - insufficient quantity")
+            # 자금 부족 기록
+            data_recorder.record_signal_skip(
+                stock_code=stock_code,
+                skip_reason="volume_surge:insufficient_quantity",
+                action_result=ActionResult.SKIP
+            )
             return
 
         # 매수 신호 생성
@@ -218,6 +232,12 @@ class StrategyAgent:
 
         if filter_result != FilterResult.PASS:
             logger.info(f"Buy signal filtered: {stock_code} - {filter_result.value}")
+            # 필터링된 시그널 기록
+            data_recorder.record_signal_skip(
+                stock_code=stock_code,
+                skip_reason=filter_result.value,
+                action_result=ActionResult.FILTERED
+            )
             return
 
         # 주문 수량/금액 계산
@@ -225,6 +245,12 @@ class StrategyAgent:
 
         if order_qty <= 0:
             logger.info(f"Buy signal rejected: {stock_code} - insufficient quantity")
+            # 자금 부족 기록
+            data_recorder.record_signal_skip(
+                stock_code=stock_code,
+                skip_reason="insufficient_quantity",
+                action_result=ActionResult.SKIP
+            )
             return
 
         # 매수 신호 생성

@@ -24,6 +24,9 @@ from src.adapters.kis_websocket import KISWebSocket, KISWebSocketConfig
 from src.agents.strategy_agent import StrategyAgent, StrategyConfig
 from src.agents.position_manager import PositionManager
 
+# Data Layer
+from src.data.recorder import data_recorder
+
 
 class MainController(QObject):
     """
@@ -218,6 +221,10 @@ class MainController(QObject):
         # 시작 전 잔고 동기화 (중요!)
         self._sync_balance()
 
+        # 데이터 기록 시작
+        starting_balance = int(self._get_current_balance())
+        data_recorder.start(starting_balance=starting_balance)
+
         # 잔고 동기화 타이머 (1분마다)
         self.balance_sync_timer.start(60000)
 
@@ -238,6 +245,10 @@ class MainController(QObject):
 
         self.balance_sync_timer.stop()
         self.position_check_timer.stop()
+
+        # 데이터 기록 종료 및 일별 요약 생성
+        ending_balance = int(self._get_current_balance())
+        data_recorder.stop(ending_balance=ending_balance)
 
         logger.info("Trading STOPPED")
 
@@ -378,6 +389,21 @@ class MainController(QObject):
                     "order_id": order.order_id
                 })
 
+                # 체결 이벤트 발행 (DataRecorder가 기록)
+                event_bus.publish(Event(
+                    type=EventType.ORDER_FILLED,
+                    data={
+                        "stock_code": stock_code,
+                        "stock_name": stock_name,
+                        "side": "BUY",
+                        "filled_qty": quantity,
+                        "filled_price": current_price,
+                        "condition_name": reason.split(":")[0] if ":" in reason else "",
+                        "strategy": reason,
+                    },
+                    source="main_controller"
+                ))
+
                 # 웹소켓 실시간 시세 구독
                 if self.kis_websocket and self.kis_websocket.is_connected():
                     self.kis_websocket.subscribe(stock_code)
@@ -402,9 +428,19 @@ class MainController(QObject):
         if quantity <= 0:
             return
 
+        # 매도 전 평균 매수가 조회 (수익 계산용)
+        avg_price = 0
+        position = self.position_manager.get_position(stock_code)
+        if position:
+            avg_price = position.avg_price
+
         logger.info(f"Processing SELL: {stock_name}({stock_code}) x{quantity} - {reason}")
 
         try:
+            # 현재가 조회 (매도 가격)
+            price_info = self.kis_adapter.get_current_price(stock_code)
+            current_price = price_info.current if price_info else 0
+
             # 시장가 매도 주문
             order = self.kis_adapter.sell_market(stock_code, quantity)
 
@@ -422,6 +458,21 @@ class MainController(QObject):
                     "order_id": order.order_id,
                     "reason": reason
                 })
+
+                # 체결 이벤트 발행 (DataRecorder가 기록)
+                event_bus.publish(Event(
+                    type=EventType.ORDER_FILLED,
+                    data={
+                        "stock_code": stock_code,
+                        "stock_name": stock_name,
+                        "side": "SELL",
+                        "filled_qty": quantity,
+                        "filled_price": current_price,
+                        "avg_price": avg_price,  # 매수 평균가
+                        "strategy": reason,
+                    },
+                    source="main_controller"
+                ))
 
                 # 웹소켓 구독 해제
                 if self.kis_websocket and self.kis_websocket.is_connected():
@@ -587,3 +638,13 @@ class MainController(QObject):
 
         if self.position_manager:
             self.position_manager.print_summary()
+
+    def _get_current_balance(self) -> float:
+        """현재 계좌 잔고 조회"""
+        try:
+            if self.kis_adapter:
+                balance = self.kis_adapter.get_account_balance()
+                return balance.total_balance
+        except Exception as e:
+            logger.debug(f"Failed to get balance: {e}")
+        return 0

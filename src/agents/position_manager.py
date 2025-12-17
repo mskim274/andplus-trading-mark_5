@@ -207,8 +207,9 @@ class PositionManager:
                     reason="synced_from_balance"
                 )
             else:
-                # 수량 업데이트
+                # 기존 포지션 업데이트 (평균단가, 수량, 현재가)
                 managed = self._positions[pos.stock_code]
+                managed.avg_price = pos.avg_price  # 실제 체결 평균가로 업데이트
                 managed.quantity = pos.quantity
                 managed.current_price = pos.current_price
 
